@@ -1,59 +1,238 @@
-<script>
-	import Counter from './Counter.svelte';
-	import welcome from '$lib/images/svelte-welcome.webp';
-	import welcome_fallback from '$lib/images/svelte-welcome.png';
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { tags, statuses, priorities } from '$lib/constants/options';
+
+	import Input from '$lib/components/Input.svelte';
+	import TextArea from '$lib/components/TextArea.svelte';
+	import Select from '$lib/components/Select.svelte';
+	import Dialog from '$lib/components/Dialog.svelte';
+	import Icon from '@iconify/svelte';
+
+	let detectWords = ['TaskName: ', 'Distribution: ', 'Status: ', 'Tag: ', 'Priority: '];
+	const commitIdRegex = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+	let inputs = [
+		{
+			type: 'INPUT',
+			model: '',
+			error: '',
+			optional: false,
+			label: 'Task Name',
+			placeholder: 'Enter task name...'
+		},
+		{
+			type: 'TEXT-AREA',
+			model: '',
+			error: '',
+			optional: true,
+			label: 'Distribution',
+			placeholder: 'Enter distribution...'
+		},
+		{
+			type: 'SELECT',
+			model: '',
+			error: '',
+			optional: false,
+			label: 'Status',
+			placeholder: 'Select status...',
+			options: statuses
+		},
+		{
+			type: 'SELECT',
+			model: '',
+			error: '',
+			optional: false,
+			label: 'Tag',
+			placeholder: 'Select tag...',
+			options: tags
+		},
+		{
+			type: 'SELECT',
+			model: '',
+			error: '',
+			optional: false,
+			label: 'Priority',
+			placeholder: 'Select priority...',
+			options: priorities
+		}
+	];
+
+	let commitName = '';
+	let isDialogOpen = false;
+	let detectedDialog = false;
+	let copiedMessage = false;
+	$: {
+		if (copiedMessage === true) {
+			let timeOut: number;
+			timeOut = setTimeout(() => {
+				copiedMessage = false;
+				clearTimeout(timeOut);
+			}, 1400);
+		}
+	}
+	let copiedId = '';
+	let copiedData: Array<string> = [];
+
+	const submitHandler = () => {
+		let status = false;
+		inputs = inputs.map((input) => {
+			input.error = '';
+			if (!input.model && !input.optional) {
+				input.error = 'Required';
+				status = true;
+			}
+			return input;
+		});
+		if (status) return;
+		isDialogOpen = true;
+
+		commitName = `${copiedId}${copiedId ? ' , ' : ''}TaskName: {${
+			inputs[0].model
+		}} , Distribution: {${inputs[1].model}} , Status: {${inputs[2].model}} , Tag: {${
+			inputs[3].model
+		}} , Priority: {${inputs[4].model}}`;
+	};
+
+	const copyToClipBoard = () => {
+		navigator.clipboard.writeText(commitName);
+		isDialogOpen = false;
+		copiedMessage = true;
+		resetInputs()
+	};
+
+	const resetInputs = () => {
+		copiedId = "";
+		copiedData = [];
+		inputs.forEach((_,i) => {
+			inputs[i].model = "" 
+		})
+	}
+
+	const handleCopiedData = () => {
+		detectedDialog = false;
+		navigator.clipboard.readText().then((t) => {
+			let id = t.split('\n')[0].split(' ')[0];
+			let tempCopy = detectWords.map((dw, i) => {
+				if (i !== detectWords.length - 1) {
+					let draft = t.substr(t.lastIndexOf(dw) + dw.length);
+					return draft.substr(1, draft.indexOf(detectWords[i + 1]) - 3);
+				} else {
+					let draft = t.substr(t.lastIndexOf(dw) + dw.length);
+					return draft.substr(1, draft.lastIndexOf('}') - 1);
+				}
+			});
+			if (commitIdRegex.test(id) && tempCopy.length === 5) {
+				detectedDialog = true;
+				copiedData = [id, ...tempCopy];
+			}
+		});
+	};
+
+	const pasteToInputs = () => {
+		copiedId = copiedData.shift() ?? '';
+		copiedData.forEach((c, i) => {
+			inputs[i].model = c;
+		});
+		detectedDialog = false;
+	};
+
+	onMount(() => {
+		window.addEventListener('focus', handleCopiedData);
+		() => {
+			window.removeEventListener('focus', handleCopiedData);
+		};
+	});
 </script>
 
 <svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
+	<title>Commit Maker</title>
+	<meta name="Commit Maker" content="Commit Maker provided by WAI" />
 </svelte:head>
 
-<section>
-	<h1>
-		<span class="welcome">
-			<picture>
-				<source srcset={welcome} type="image/webp" />
-				<img src={welcome_fallback} alt="Welcome" />
-			</picture>
-		</span>
+<section class="w-full flex flex-col items-center pt-3 gap-3">
+	<h1 class="text-3xl font-title font-extrabold">Commit Maker</h1>
+	<form
+		class="flex flex-col items-center justify-center gap-3 min-w-[300px] max-w-[400px]: sm:w-[360px]"
+		on:submit|preventDefault={submitHandler}
+	>
+		{#each inputs as input, i (i)}
+			{#if input.type === 'INPUT'}
+				<Input
+					bind:error={input.error}
+					bind:model={input.model}
+					label={input.label}
+					placeholder={input.placeholder}
+				/>
+			{:else if input.type === 'TEXT-AREA'}
+				<TextArea
+					bind:error={input.error}
+					bind:model={input.model}
+					label={input.label}
+					placeholder={input.placeholder}
+				/>
+			{:else if input.type === 'SELECT'}
+				<Select
+					bind:error={input.error}
+					bind:model={input.model}
+					label={input.label}
+					placeholder={input.placeholder}
+					options={input.options}
+				/>
+			{/if}
+		{/each}
 
-		to your new<br />SvelteKit app
-	</h1>
+		<button
+			type="submit"
+			class="neo-wrap neo-wrap-btn bg-primary px-2 w-[150px] mt-2 text-center h-9 flex justify-center items-center gap-2"
+			>Generate
+			<Icon icon="line-md:cog-filled-loop" font-size={22} />
+		</button>
+	</form>
 
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
+	<Dialog
+		{isDialogOpen}
+		on:closeDialog={() => {
+			isDialogOpen = false;
+		}}
+	>
+		<h2 class="text-center font-semibold mb-2">✨ Your commit message is here ✨</h2>
+		<div class="flex flex-col justify-center items-center">
+			<p class="text-sm text-left">{commitName}</p>
 
-	<Counter />
+			<button
+				on:click={copyToClipBoard}
+				class="mx-auto neo-wrap neo-wrap-btn bg-primary px-2 w-[150px] mt-2 text-center h-9 flex justify-center items-center gap-2"
+				>Copy
+				<Icon icon="icon-park-outline:copy" font-size={20} />
+			</button>
+		</div></Dialog
+	>
+
+	<Dialog
+		isDialogOpen={detectedDialog && !copiedId}
+		on:closeDialog={() => {
+			detectedDialog = false;
+		}}
+	>
+		<h2 class="text-center font-semibold mb-1">We detected you have updatable commit message 🔎</h2>
+		<div class="text-center font-semibold mb-1">Do you want to paste & update?</div>
+		<button
+			on:click={() => pasteToInputs()}
+			class="mx-auto neo-wrap neo-wrap-btn bg-primary px-2 w-[150px] mt-2 text-center h-9 flex justify-center items-center gap-2"
+			>Paste
+			<Icon icon="fluent:clipboard-paste-16-regular" font-size={20} />
+		</button>
+	</Dialog>
+
+	{#if copiedMessage}
+		<div
+			transition:fly={{ x: 288, duration: 288 }}
+			class="fixed bottom-[3%] right-[2%] p-2 rounded-md neo-wrap bg-[#e3fdec] text-sm w-[240px] flex justify-between items-center"
+		>
+			<span>Commit Message Copied!</span>
+			<button on:click={() => (copiedMessage = false)}>
+				<Icon icon="jam:close" class="text-error" font-size={18} />
+			</button>
+		</div>
+	{/if}
 </section>
-
-<style>
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
-	}
-
-	.welcome {
-		display: block;
-		position: relative;
-		width: 100%;
-		height: 0;
-		padding: 0 0 calc(100% * 495 / 2048) 0;
-	}
-
-	.welcome img {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		top: 0;
-		display: block;
-	}
-</style>
