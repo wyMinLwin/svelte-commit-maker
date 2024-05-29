@@ -86,27 +86,27 @@
 		if (status) return;
 		isDialogOpen = true;
 
-		commitName = `${copiedId}${copiedId ? ' , ' : ''}TaskName: {${
+		commitName = `${copiedId}${copiedId ? '\n*If want revise keep fill , if not can remove fil*\n' : ''}TaskName: {${
 			inputs[0].model
-		}} , Distribution: {${inputs[1].model}} , Status: {${inputs[2].model}} , Tag: {${
+		}}\nDistribution: {${inputs[1].model}}\nStatus: {${inputs[2].model}}\nTag: {${
 			inputs[3].model
-		}} , Priority: {${inputs[4].model}}`;
+		}}\nPriority: {${inputs[4].model}}`;
 	};
 
 	const copyToClipBoard = () => {
 		navigator.clipboard.writeText(commitName);
 		isDialogOpen = false;
 		copiedMessage = true;
-		resetInputs()
+		resetInputs();
 	};
 
 	const resetInputs = () => {
-		copiedId = "";
+		copiedId = '';
 		copiedData = [];
-		inputs.forEach((_,i) => {
-			inputs[i].model = "" 
-		})
-	}
+		inputs.forEach((_, i) => {
+			inputs[i].model = '';
+		});
+	};
 
 	const handleCopiedData = () => {
 		detectedDialog = false;
@@ -236,3 +236,6 @@
 		</div>
 	{/if}
 </section>
+<footer class="text-sm text-center text-border mt-auto p-1">
+	Provided by <a class="font-medium underline" href="https://github.com/wyMinLwin/">Wai Yan Min Lwin</a>
+</footer>
