@@ -86,11 +86,11 @@
 		if (status) return;
 		isDialogOpen = true;
 
-		commitName = `${copiedId}${copiedId ? '\n*If want revise keep fill , if not can remove fil*\n' : ''}TaskName: {${
-			inputs[0].model
-		}}\nDistribution: {${inputs[1].model}}\nStatus: {${inputs[2].model}}\nTag: {${
-			inputs[3].model
-		}}\nPriority: {${inputs[4].model}}`;
+		commitName = `${copiedId}${
+			copiedId ? '\n*If want revise keep fill , if not can remove fil*\n' : ''
+		}TaskName: {${inputs[0].model}}\nDistribution: {${inputs[1].model}}\nStatus: {${
+			inputs[2].model
+		}}\nTag: {${inputs[3].model}}\nPriority: {${inputs[4].model}}`;
 	};
 
 	const copyToClipBoard = () => {
@@ -137,10 +137,12 @@
 	};
 
 	onMount(() => {
-		window.addEventListener('focus', handleCopiedData);
-		() => {
-			window.removeEventListener('focus', handleCopiedData);
-		};
+		onMount(() => {
+			window.addEventListener('focus', handleCopiedData);
+			return () => {
+				window.removeEventListener('focus', handleCopiedData);
+			};
+		});
 	});
 </script>
 
@@ -237,5 +239,7 @@
 	{/if}
 </section>
 <footer class="text-sm text-center text-border mt-auto p-1">
-	Provided by <a class="font-medium underline" href="https://github.com/wyMinLwin/">Wai Yan Min Lwin</a>
+	Provided by <a class="font-medium underline" href="https://github.com/wyMinLwin/"
+		>Wai Yan Min Lwin</a
+	>
 </footer>
