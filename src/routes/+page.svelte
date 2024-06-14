@@ -2,16 +2,17 @@
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { tags, statuses, priorities } from '$lib/constants/options';
-
+	
+	import { commitIdRegex } from '$lib/regexes';
 	import Input from '$lib/components/Input.svelte';
 	import TextArea from '$lib/components/TextArea.svelte';
 	import Select from '$lib/components/Select.svelte';
 	import Dialog from '$lib/components/Dialog.svelte';
+	import type { InputType } from '$lib/types/InputType';
 	import Icon from '@iconify/svelte';
+	import { writeCommit } from '$lib/utils';
 
-	let detectWords = ['TaskName: ', 'Distribution: ', 'Status: ', 'Tag: ', 'Priority: '];
-	const commitIdRegex = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-	let inputs = [
+	let inputs:Array<InputType> = [
 		{
 			type: 'INPUT',
 			model: '',
@@ -85,12 +86,7 @@
 		});
 		if (status) return;
 		isDialogOpen = true;
-
-		commitName = `${copiedId}${
-			copiedId ? '\n*If want revise keep fill , if not can remove fil*\n' : ''
-		}TaskName: {${inputs[0].model}}\nDistribution: {${inputs[1].model}}\nStatus: {${
-			inputs[2].model
-		}}\nTag: {${inputs[3].model}}\nPriority: {${inputs[4].model}}`;
+		commitName = writeCommit(copiedId, inputs);
 	};
 
 	const copyToClipBoard = () => {
@@ -110,22 +106,23 @@
 
 	const handleCopiedData = () => {
 		detectedDialog = false;
-		navigator.clipboard.readText().then((t) => {
-			let id = t.split('\n')[0].split(' ')[0];
-			let tempCopy = detectWords.map((dw, i) => {
-				if (i !== detectWords.length - 1) {
-					let draft = t.substr(t.lastIndexOf(dw) + dw.length);
-					return draft.substr(1, draft.indexOf(detectWords[i + 1]) - 3);
-				} else {
-					let draft = t.substr(t.lastIndexOf(dw) + dw.length);
-					return draft.substr(1, draft.lastIndexOf('}') - 1);
+		if (navigator.clipboard && navigator.clipboard.readText) {
+			navigator.clipboard.readText().then((t) => {
+				let id = t.split('\n')[0].split(' ')[0].trim();
+				let splitedCopiedData = t.substr(t.lastIndexOf("TaskName: ")+1).split('\n');
+
+				let tempCopy = splitedCopiedData.map(sCopyData => {
+					let draft = sCopyData.substr(sCopyData.indexOf('{')+1)
+					return draft.substr(0, draft.lastIndexOf('}'));
+				})
+				
+				if (commitIdRegex.test(id) && tempCopy.length === 5) {
+					detectedDialog = true;
+					copiedData = [id, ...tempCopy];
 				}
 			});
-			if (commitIdRegex.test(id) && tempCopy.length === 5) {
-				detectedDialog = true;
-				copiedData = [id, ...tempCopy];
-			}
-		});
+		} else {
+			console.log('Clipboard API not available');}
 	};
 
 	const pasteToInputs = () => {
@@ -137,12 +134,10 @@
 	};
 
 	onMount(() => {
-		onMount(() => {
-			window.addEventListener('focus', handleCopiedData);
-			return () => {
-				window.removeEventListener('focus', handleCopiedData);
-			};
-		});
+		window.addEventListener('focus', handleCopiedData);
+		return () => {
+			window.removeEventListener('focus', handleCopiedData);
+		};
 	});
 </script>
 
